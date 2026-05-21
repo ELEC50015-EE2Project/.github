@@ -2,6 +2,11 @@
 
 For each module/codebase, create a seperate repository (within the project) and push your code there. 
 
+# Overall Architecture
+
+<img width="2518" height="1274" alt="image" src="https://github.com/user-attachments/assets/8904dbd0-65dc-4a66-8e4c-acd61cafa4b5" />
+
+
 # AXI Architecture
 
 ## Primitives
@@ -30,7 +35,7 @@ For each module/codebase, create a seperate repository (within the project) and 
 
 ---
 
-## Modules
+# Modules
 
 ### IC Loader
 
@@ -148,3 +153,4 @@ For each module/codebase, create a seperate repository (within the project) and 
 **Behaviour:**
 1. Reads Pixel Primitives from the input FIFO.
 2. Writes each pixel's RGB data to the DDR address `frame_buffer_base + address`, where `address` is the pixel index carried in the Pixel Primitive.
+
