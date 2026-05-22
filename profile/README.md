@@ -38,6 +38,12 @@ For each module/codebase, create a seperate repository (within the project) and 
 
 # Modules
 
+To edit an IP in Vivado, run this command in the tcl window:
+
+```
+ipx::edit_ip_in_project -upgrade true -name edit_ip_project -directory C:/Users/.../ColourMap/ColourMap_1.0 C:/Users/.../ColourMap/ColourMap_1.0/component.xml
+```
+
 ### IC Loader
 
 | Direction | Interface         | Description                        |
