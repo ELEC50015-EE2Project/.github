@@ -24,10 +24,11 @@ For each module/codebase, create a seperate repository (within the project) and 
 | [63:32]   | 32b   | θ₂       | Q16.16                             |
 | [31:0]    | 32b   | θ₁       | Q16.16                             |
 
-### Pixel Primitive (44 bits)
+### Pixel Primitive (48 bits)
 
 | Bits    | Width | Field   | Description     |
 |---------|-------|---------|-----------------|
+| [47:44] | 4b    | Padding  | Tied to zero                       |
 | [43:24] | 20b   | Address | Pixel index     |
 | [23:16] | 8b    | Red     | R channel       |
 | [15:8]  | 8b    | Green   | G channel       |
