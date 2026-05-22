@@ -15,7 +15,7 @@ For each module/codebase, create a seperate repository (within the project) and 
 
 | Bits      | Width | Field    | Description                        |
 |-----------|-------|----------|------------------------------------|
-| [191:165] | 28b   | Padding  | Tied to zero                       |
+| [191:165] | 27b   | Padding  | Tied to zero                       |
 | [164]     | 1b    | Flipped? | Has the pendulum flipped?          |
 | [163:144] | 20b   | Address  | Pixel index (0–921,599)            |
 | [143:128] | 16b   | Count    | RK4 steps taken so far             |
