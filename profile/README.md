@@ -46,7 +46,9 @@ For each module/codebase, create a seperate repository (within the project) and 
 | Output    | AXI4-Stream Master     | Writes state tokens to New State FIFO |
 
 **AXI-Lite registers:**
-- ω₁, ω₂ (initial angular velocities)
+- ω₁
+- ω₂
+- Total pixel count
 - Base address of IC table in DDR
 
 **Behaviour:**
@@ -54,6 +56,9 @@ For each module/codebase, create a seperate repository (within the project) and 
 2. Combine the fetched θ₁, θ₂ with ω₁, ω₂ from AXI-Lite, `count = 0`, `address = entry index`, and `flipped = 0` to form a complete State Primitive.
 3. Push the token onto the New State FIFO via AXI-Stream, then advance to the next entry.
 4. On new parameters, restart from entry 0. Stop once all IC entries have been dispatched.
+
+**Software:**
+Write omega and pixel count at any time, to trigger the rerender write the base address again (it doesn't need to change).
 
 ---
 
