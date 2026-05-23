@@ -44,6 +44,8 @@ To edit an IP in Vivado, run this command in the tcl window:
 ipx::edit_ip_in_project -upgrade true -name edit_ip_project -directory C:/Users/.../ColourMap/ColourMap_1.0 C:/Users/.../ColourMap/ColourMap_1.0/component.xml
 ```
 
+The generated skeleton code is quite verbose and icl full of nothing, the most important thing is the top level as that's where most of the logic can be written. The sub files aren't necessary, apart from the AXI Lite handler.
+
 ### IC Loader
 
 | Direction | Interface         | Description                        |
