@@ -68,6 +68,8 @@ The generated skeleton code is quite verbose and icl full of nothing, the most i
 **Software:**
 Write omega and pixel count at any time, to trigger the rerender write the base address again (it doesn't need to change).
 
+**The FIFO requests data from the IC Loader, it should request data when there is atleast 8 free spaces in the FIFO as that corresponds to the burst size configured in the IP.**
+
 ---
 
 ### Scheduler
