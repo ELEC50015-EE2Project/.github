@@ -54,10 +54,10 @@ The generated skeleton code is quite verbose and icl full of nothing, the most i
 | Output    | AXI4-Stream Master     | Writes state tokens to New State FIFO |
 
 **AXI-Lite registers:**
-- ω₁
-- ω₂
-- Total pixel count
-- Base address of IC table in DDR
+- Reg0: ω₁
+- Reg1: ω₂
+- Reg2: Total pixel count
+- Reg3: Base address of IC table in DDR
 
 **Behaviour:**
 1. If the New State FIFO is not full, fetch the next IC table entry from DDR. Each entry contains θ₁ and θ₂.
@@ -156,7 +156,7 @@ Write omega and pixel count at any time, to trigger the rerender write the base 
 
 ---
 
-### Frame Writer
+### Pixel Writer
 
 | Direction | Interface              | Description                                  |
 |-----------|------------------------|----------------------------------------------|
@@ -164,9 +164,19 @@ Write omega and pixel count at any time, to trigger the rerender write the base 
 | Output    | AXI4 Full Master Write | Writes pixel data to DDR via HP port         |
 
 **AXI-Lite registers:**
-- Base address of the frame buffer in DDR
+- Base address of frame buffer 0 in DDR
+- Base address of frame buffer 1 in DDR
 
 **Behaviour:**
 1. Reads Pixel Primitives from the input FIFO.
 2. Writes each pixel's RGB data to the DDR address `frame_buffer_base + address`, where `address` is the pixel index carried in the Pixel Primitive.
+3. Does the above write for both frame buffers.
+
+# Software
+Here are a list of things archit you need to be aware from a hardware side:
+
+1. All the AXI-Lite registers need to be programmed for the modules above
+2. The controller sends data over SPI which is then read by the PYNQ boards hardware into a FIFO, and then drained by the ARM CPU. [Example](https://github.com/ELEC50015-EE2Project/Software_Examples/blob/main/spi.py)
+4. To trigger a re-render, you have to program the AXI-Lite register for the initial condition base table. IT doesn't even have to change the value stored in the register, just a write to the register starts the rerender. This prevents updating the parameters from triggering the re-render as all the parameters might not have been set by the user. [Example](https://github.com/ELEC50015-EE2Project/Software_Examples/blob/main/ic_loader.py)
+5. Under a very botchy idea, some of the frame buffer to be only modified by HW (the PixelWriter IP) and some of it to be by the SW for the animation and general information display. This means both HW and SW can update the frame buffer(s) independently, which prevents the SW from having to constantly pull pixels from the hardware and manually write them to the frame buffer. The SW can then be free to focus on running the animations for the display. Note that writing to the DDR automatically causes the frame buffer to be updated, as the VDMA automatically scans the same frame buffer location and just outputs whatever is there.
 
