@@ -1,11 +1,12 @@
 # Double Pendulum FPGA Implementation
 
-For each module/codebase, create a seperate repository (within the project) and push your code there. 
+For each module/codebase, create a separate repository (within the project) and push your code there.
 
 # Overall Architecture
 
 <img width="2518" height="1274" alt="image" src="https://github.com/user-attachments/assets/8904dbd0-65dc-4a66-8e4c-acd61cafa4b5" />
 
+---
 
 # AXI Architecture
 
@@ -13,26 +14,26 @@ For each module/codebase, create a seperate repository (within the project) and 
 
 ### State Primitive (192 bits)
 
-| Bits      | Width | Field    | Description                        |
-|-----------|-------|----------|------------------------------------|
-| [191:165] | 27b   | Padding  | Tied to zero                       |
-| [164]     | 1b    | Flipped? | Has the pendulum flipped?          |
-| [163:144] | 20b   | Address  | Pixel index (0–921,599)            |
-| [143:128] | 16b   | Count    | RK4 steps taken so far             |
-| [127:96]  | 32b   | ω₂       | Q16.16                             |
-| [95:64]   | 32b   | ω₁       | Q16.16                             |
-| [63:32]   | 32b   | θ₂       | Q16.16                             |
-| [31:0]    | 32b   | θ₁       | Q16.16                             |
+| Bits      | Width | Field    | Description               |
+|-----------|-------|----------|---------------------------|
+| [191:165] | 27b   | Padding  | Tied to zero              |
+| [164]     | 1b    | Flipped? | Has the pendulum flipped? |
+| [163:144] | 20b   | Address  | Pixel index (0–921,599)   |
+| [143:128] | 16b   | Count    | RK4 steps taken so far    |
+| [127:96]  | 32b   | ω₂       | Q16.16                    |
+| [95:64]   | 32b   | ω₁       | Q16.16                    |
+| [63:32]   | 32b   | θ₂       | Q16.16                    |
+| [31:0]    | 32b   | θ₁       | Q16.16                    |
 
 ### Pixel Primitive (48 bits)
 
-| Bits    | Width | Field   | Description     |
-|---------|-------|---------|-----------------|
-| [47:44] | 4b    | Padding  | Tied to zero                       |
-| [43:24] | 20b   | Address | Pixel index     |
-| [23:16] | 8b    | Red     | R channel       |
-| [15:8]  | 8b    | Green   | G channel       |
-| [7:0]   | 8b    | Blue    | B channel       |
+| Bits    | Width | Field   | Description  |
+|---------|-------|---------|--------------|
+| [47:44] | 4b    | Padding | Tied to zero |
+| [43:24] | 20b   | Address | Pixel index  |
+| [23:16] | 8b    | Red     | R channel    |
+| [15:8]  | 8b    | Green   | G channel    |
+| [7:0]   | 8b    | Blue    | B channel    |
 
 ---
 
@@ -40,24 +41,30 @@ For each module/codebase, create a seperate repository (within the project) and 
 
 To edit an IP in Vivado, run this command in the tcl window:
 
-```
+```tcl
 ipx::edit_ip_in_project -upgrade true -name edit_ip_project -directory C:/Users/.../ColourMap/ColourMap_1.0 C:/Users/.../ColourMap/ColourMap_1.0/component.xml
 ```
 
-The generated skeleton code is quite verbose and icl full of nothing, the most important thing is the top level as that's where most of the logic can be written. The sub files aren't necessary, apart from the AXI Lite handler.
+The generated skeleton code is quite verbose and full of nothing; the most important thing is the top level as that's where most of the logic can be written. The sub files aren't necessary, apart from the AXI Lite handler.
+
+---
 
 ### IC Loader
 
-| Direction | Interface         | Description                        |
-|-----------|-------------------|------------------------------------|
-| Input     | AXI4 Full Master Read  | Reads IC table from DDR       |
-| Output    | AXI4-Stream Master     | Writes state tokens to New State FIFO |
+| Direction | Interface             | Description                           |
+|-----------|-----------------------|---------------------------------------|
+| Input     | AXI4 Full Master Read | Reads IC table from DDR               |
+| Input     | AXI4-Lite Slave       | Configuration registers (see below)   |
+| Output    | AXI4-Stream Master    | Writes state tokens to New State FIFO |
 
-**AXI-Lite registers:**
-- Reg0: ω₁
-- Reg1: ω₂
-- Reg2: Total pixel count
-- Reg3: Base address of IC table in DDR
+**AXI-Lite Registers:**
+
+| Register | Field   | Description                                                      |
+|----------|---------|------------------------------------------------------------------|
+| Reg 0    | ω₁      | Initial angular velocity, Q16.16                                 |
+| Reg 1    | ω₂      | Initial angular velocity, Q16.16                                 |
+| Reg 2    | Count   | Total pixel count                                                |
+| Reg 3    | Base address | Base address of IC table in DDR — **write to trigger re-render** |
 
 **Behaviour:**
 1. If the New State FIFO is not full, fetch the next IC table entry from DDR. Each entry contains θ₁ and θ₂.
@@ -66,20 +73,20 @@ The generated skeleton code is quite verbose and icl full of nothing, the most i
 4. On new parameters, restart from entry 0. Stop once all IC entries have been dispatched.
 
 **Software:**
-Write omega and pixel count at any time, to trigger the rerender write the base address again (it doesn't need to change).
+Write omega and pixel count at any time. To trigger a re-render, write to Reg 3 (base address) — it doesn't need to change value; the write event itself starts the re-render. This prevents updating other parameters from triggering a re-render before all parameters have been set.
 
-**The FIFO requests data from the IC Loader, it should request data when there is atleast 8 free spaces in the FIFO as that corresponds to the burst size configured in the IP.**
+> **Note:** The FIFO requests data from the IC Loader; it should request data when there are at least 8 free spaces in the FIFO, as that corresponds to the burst size configured in the IP.
 
 ---
 
 ### Scheduler
 
-| Direction | Interface              | Description                        |
-|-----------|------------------------|------------------------------------|
-| Input     | AXI4-Stream Slave      | New State FIFO                     |
-| Input     | AXI4-Stream Slave      | Executing State FIFO               |
-| Output    | AXI4-Stream Master     | HLS core 0                         |
-| Output    | AXI4-Stream Master     | HLS core 1                         |
+| Direction | Interface          | Description          |
+|-----------|--------------------|----------------------|
+| Input     | AXI4-Stream Slave  | New State FIFO       |
+| Input     | AXI4-Stream Slave  | Executing State FIFO |
+| Output    | AXI4-Stream Master | HLS core 0           |
+| Output    | AXI4-Stream Master | HLS core 1           |
 
 **Behaviour:**
 1. Forwards state tokens to whichever HLS IP core asserts `TREADY`, indicating it is ready to accept a new token.
@@ -90,17 +97,23 @@ Write omega and pixel count at any time, to trigger the rerender write the base 
 
 ### HLS IP Core (×N)
 
-| Direction | Interface              | Description                        |
-|-----------|------------------------|------------------------------------|
-| Input     | AXI4-Stream Slave      | State token from Scheduler         |
-| Output    | AXI4-Stream Master     | Updated state token                |
-| Output    | Signal (1b)            | Flipped?                           |
+| Direction | Interface          | Description                        |
+|-----------|--------------------|------------------------------------|
+| Input     | AXI4-Stream Slave  | State token from Scheduler         |
+| Input     | AXI4-Lite Slave    | Configuration registers (see below)|
+| Output    | AXI4-Stream Master | Updated state token                |
+| Output    | Signal (1b)        | Flipped?                           |
 
-**AXI-Lite registers:**
-- m₁, m₂
-- L₁, L₂
-- g
-- dt
+**AXI-Lite Registers:**
+
+| Register | Field | Description                            |
+|----------|-------|----------------------------------------|
+| Reg 0    | m₁    | Mass of first arm, Q16.16              |
+| Reg 1    | m₂    | Mass of second arm, Q16.16             |
+| Reg 2    | L₁    | Length of first arm, Q16.16            |
+| Reg 3    | L₂    | Length of second arm, Q16.16           |
+| Reg 4    | g     | Gravitational acceleration, Q16.16     |
+| Reg 5    | dt    | Integration timestep, Q16.16           |
 
 **Behaviour:**
 1. Performs one RK4 integration step on the incoming state, advancing (θ₁, θ₂, ω₁, ω₂) by dt.
@@ -110,15 +123,19 @@ Write omega and pixel count at any time, to trigger the rerender write the base 
 
 ### Eviction Logic (×2)
 
-| Direction | Interface              | Description                        |
-|-----------|------------------------|------------------------------------|
-| Input     | AXI4-Stream Slave      | State token from HLS core          |
-| Input     | Signal (1b)            | Flipped?                           |
-| Output    | AXI4-Stream Master     | Finished state stream              |
-| Output    | AXI4-Stream Master     | Still-executing state stream       |
+| Direction | Interface          | Description                        |
+|-----------|--------------------|------------------------------------|
+| Input     | AXI4-Stream Slave  | State token from HLS core          |
+| Input     | Signal (1b)        | Flipped?                           |
+| Input     | AXI4-Lite Slave    | Configuration registers (see below)|
+| Output    | AXI4-Stream Master | Finished state stream              |
+| Output    | AXI4-Stream Master | Still-executing state stream       |
 
-**AXI-Lite registers:**
-- `max_count`
+**AXI-Lite Registers:**
+
+| Register | Field       | Description                                       |
+|----------|-------------|---------------------------------------------------|
+| Reg 0    | `max_count` | Evict token when count reaches this value         |
 
 **Behaviour:**
 1. If `flipped == 1` or `count == max_count`, evict the token — send it downstream on the Finished State stream.
@@ -128,13 +145,17 @@ Write omega and pixel count at any time, to trigger the rerender write the base 
 
 ### Colour Map
 
-| Direction | Interface              | Description                        |
-|-----------|------------------------|------------------------------------|
-| Input     | AXI4-Stream Slave      | Finished state token               |
-| Output    | AXI4-Stream Master     | Pixel Primitive                    |
+| Direction | Interface          | Description                        |
+|-----------|--------------------|------------------------------------|
+| Input     | AXI4-Stream Slave  | Finished state token               |
+| Input     | AXI4-Lite Slave    | Configuration registers (see below)|
+| Output    | AXI4-Stream Master | Pixel Primitive                    |
 
-**AXI-Lite registers:**
-- `max_count`
+**AXI-Lite Registers:**
+
+| Register | Field       | Description                                  |
+|----------|-------------|----------------------------------------------|
+| Reg 0    | `max_count` | Upper bound for linear colour mapping        |
 
 **Behaviour:**
 1. Applies a linear mapping of `count` over the range `[0, max_count]` to an RGB colour value.
@@ -144,11 +165,11 @@ Write omega and pixel count at any time, to trigger the rerender write the base 
 
 ### Round Robin Arbiter
 
-| Direction | Interface              | Description                        |
-|-----------|------------------------|------------------------------------|
-| Input     | AXI4-Stream Slave      | Input 0                            |
-| Input     | AXI4-Stream Slave      | Input 1                            |
-| Output    | AXI4-Stream Master     | Merged output                      |
+| Direction | Interface          | Description   |
+|-----------|--------------------|---------------|
+| Input     | AXI4-Stream Slave  | Input 0       |
+| Input     | AXI4-Stream Slave  | Input 1       |
+| Output    | AXI4-Stream Master | Merged output |
 
 **Behaviour:**
 1. If data is present on only one input, forward it immediately.
@@ -158,25 +179,31 @@ Write omega and pixel count at any time, to trigger the rerender write the base 
 
 ### Pixel Writer
 
-| Direction | Interface              | Description                                  |
-|-----------|------------------------|----------------------------------------------|
-| Input     | AXI4-Stream Slave      | Pixel Primitives from upstream FIFO          |
-| Output    | AXI4 Full Master Write | Writes pixel data to DDR via HP port         |
+| Direction | Interface             | Description                          |
+|-----------|-----------------------|--------------------------------------|
+| Input     | AXI4-Stream Slave     | Pixel Primitives from upstream FIFO  |
+| Input     | AXI4-Lite Slave       | Configuration registers (see below)  |
+| Output    | AXI4 Full Master Write| Writes pixel data to DDR via HP port |
 
-**AXI-Lite registers:**
-- Base address of frame buffer 0 in DDR
-- Base address of frame buffer 1 in DDR
+**AXI-Lite Registers:**
+
+| Register | Field        | Description                           |
+|----------|--------------|---------------------------------------|
+| Reg 0    | Base address | Base address of frame buffer 0 in DDR |
+| Reg 1    | Base address | Base address of frame buffer 1 in DDR |
 
 **Behaviour:**
 1. Reads Pixel Primitives from the input FIFO.
 2. Writes each pixel's RGB data to the DDR address `frame_buffer_base + address`, where `address` is the pixel index carried in the Pixel Primitive.
-3. Does the above write for both frame buffers.
+3. Performs the above write for **both** frame buffers.
+
+---
 
 # Software
-Here are a list of things archit you need to be aware from a hardware side:
 
-1. All the AXI-Lite registers need to be programmed for the modules above
-2. The controller sends data over SPI which is then read by the PYNQ boards hardware into a FIFO, and then drained by the ARM CPU. [Example](https://github.com/ELEC50015-EE2Project/SoftwareExamples/blob/main/spi.py)
-4. To trigger a re-render, you have to program the AXI-Lite register for the initial condition base table. IT doesn't even have to change the value stored in the register, just a write to the register starts the rerender. This prevents updating the parameters from triggering the re-render as all the parameters might not have been set by the user. [Example](https://github.com/ELEC50015-EE2Project/SoftwareExamples/blob/main/ic_loader.py)
-5. Under a very botchy idea, some of the frame buffer to be only modified by HW (the PixelWriter IP) and some of it to be by the SW for the animation and general information display. This means both HW and SW can update the frame buffer(s) independently, which prevents the SW from having to constantly pull pixels from the hardware and manually write them to the frame buffer. The SW can then be free to focus on running the animations for the display. Note that writing to the DDR automatically causes the frame buffer to be updated, as the VDMA automatically scans the same frame buffer location and just outputs whatever is there.
+Here are a list of things you need to be aware of from a hardware side:
 
+1. All the AXI-Lite registers need to be programmed for the modules above.
+2. The controller sends data over SPI which is then read by the PYNQ board's hardware into a FIFO, and then drained by the ARM CPU. [Example](https://github.com/ELEC50015-EE2Project/SoftwareExamples/blob/main/spi.py)
+3. To trigger a re-render, you have to write to the AXI-Lite register for the initial condition base table (IC Loader Reg 3). It doesn't even have to change the value stored in the register — just a write to the register starts the re-render. This prevents updating the parameters from triggering the re-render before all parameters have been set by the user. [Example](https://github.com/ELEC50015-EE2Project/SoftwareExamples/blob/main/ic_loader.py)
+4. Under a somewhat unorthodox arrangement, part of the frame buffer is to be modified only by HW (the Pixel Writer IP) and part of it by SW for animation and general information display. This means both HW and SW can update the frame buffer(s) independently, which prevents SW from having to constantly pull pixels from hardware and manually write them to the frame buffer. The SW can then be free to focus on running animations for the display. Note that writing to the DDR automatically causes the frame buffer to be updated, as the VDMA automatically scans the same frame buffer location and outputs whatever is there.
