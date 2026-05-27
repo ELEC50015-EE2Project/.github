@@ -126,7 +126,6 @@ Write omega and pixel count at any time. To trigger a re-render, write to Reg 3 
 | Direction | Interface          | Description                        |
 |-----------|--------------------|------------------------------------|
 | Input     | AXI4-Stream Slave  | State token from HLS core          |
-| Input     | Signal (1b)        | Flipped?                           |
 | Input     | AXI4-Lite Slave    | Configuration registers (see below)|
 | Output    | AXI4-Stream Master | Finished state stream              |
 | Output    | AXI4-Stream Master | Still-executing state stream       |
