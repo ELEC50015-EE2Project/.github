@@ -6,6 +6,10 @@ For each module/codebase, create a separate repository (within the project) and 
 
 <img width="2518" height="1274" alt="image" src="https://github.com/user-attachments/assets/8904dbd0-65dc-4a66-8e4c-acd61cafa4b5" />
 
+**Optimisations Ideas:**
+
+We don't even need the Round Round Arbiter and 2x Evicition Logic and Colour Map. Have the scheduler delay the start of the HLS IP, by not sending the state. Now there will only ever be one next state coming off both HLS IP at the same time, so both can be routed to 1 Eviction Logic block and so on. Throughput remains the same.
+
 ---
 
 # AXI Architecture
