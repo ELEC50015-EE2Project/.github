@@ -106,7 +106,6 @@ Write omega and pixel count at any time. To trigger a re-render, write to Reg 3 
 | Input     | AXI4-Stream Slave  | State token from Scheduler         |
 | Input     | AXI4-Lite Slave    | Configuration registers (see below)|
 | Output    | AXI4-Stream Master | Updated state token                |
-| Output    | Signal (1b)        | Flipped?                           |
 
 **AXI-Lite Registers:**
 
