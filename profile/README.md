@@ -18,16 +18,16 @@ We don't even need the Round Round Arbiter and 2x Evicition Logic and Colour Map
 
 ### State Primitive (192 bits)
 
-| Bits      | Width | Field    | Description               |
+| Bits | Width | Field | Description |
 |-----------|-------|----------|---------------------------|
-| [191:165] | 27b   | Padding  | Tied to zero              |
-| [164]     | 1b    | Flipped? | Has the pendulum flipped? |
-| [163:144] | 20b   | Address  | Pixel index (0–921,599)   |
-| [143:128] | 16b   | Count    | RK4 steps taken so far    |
-| [127:96]  | 32b   | ω₂       | Q16.16                    |
-| [95:64]   | 32b   | ω₁       | Q16.16                    |
-| [63:32]   | 32b   | θ₂       | Q16.16                    |
-| [31:0]    | 32b   | θ₁       | Q16.16                    |
+| [191:133] | 59b | Padding | Tied to zero |
+| [132] | 1b | Flipped? | Has the pendulum flipped? |
+| [131:112] | 20b | Address | Pixel index (0–921,599) |
+| [111:96] | 16b | Count | RK4 steps taken so far |
+| [95:72] | 24b | ω₂ | Q12.12 |
+| [71:48] | 24b | ω₁ | Q12.12 |
+| [47:24] | 24b | θ₂ | Q12.12 |
+| [23:0] | 24b | θ₁ | Q12.12 |
 
 ### Pixel Primitive (48 bits)
 
